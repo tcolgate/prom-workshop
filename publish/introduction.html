@@ -1,0 +1,1941 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Prometheus Workshop</title>
+    <meta charset='utf-8'>
+    <script src='static/slides.js'></script>
+  </head>
+
+  <body style='display: none'>
+
+    <section class='slides layout-widescreen'>
+      
+      <article>
+        <h1>Prometheus Workshop</h1>
+        <h3>22 July 2016</h3>
+        
+        
+          <div class="presenter">
+            
+  
+  <p>
+    Tristan Colgate-McFarlane
+  </p>
+  
+
+  
+  <p>
+    Infrastructure Engineer, Qubit
+  </p>
+  
+
+          </div>
+        
+      </article>
+      
+  
+  
+      <article>
+      
+        <h3>Agenda</h3>
+        
+  <ul>
+  
+    <li>Installing</li>
+  
+    <li>Querying</li>
+  
+    <li>Alerting</li>
+  
+    <li>Grafana</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h2>Installation</h2>
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>An install for learning</h3>
+        
+  
+  <p>
+    A simple installation for experimentation
+  </p>
+  
+
+  <ul>
+  
+    <li>Components</li>
+  
+    <li>Configuration</li>
+  
+    <li>Running</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Components</h3>
+        
+  
+  <p>
+    Download from <a href="https://prometheus.io/download/" target="_blank">prometheus.io/download/</a>
+  </p>
+  
+
+  <ul>
+  
+    <li>Prometheus</li>
+  
+    <li>node_exporter</li>
+  
+  </ul>
+
+  
+  <p>
+    Download, and untar. Both can be run directly from the download directory
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Configuration</h3>
+        
+  
+  <p>
+    Simple prometheus,yml
+<br>
+
+    - Monitors itself (not done by default)
+<br>
+
+    - Monitors the node exporter
+  </p>
+  
+
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">global:</span>
+<span num="2">  scrape_interval:     1s #</span>
+<span num="3"></span>
+<span num="4">rule_files:</span>
+<span num="5">  - ./*.rules</span>
+<span num="6"></span>
+<span num="7">scrape_configs:</span>
+<span num="8">  - job_name: &#39;prometheus&#39;</span>
+<span num="9">    scrape_interval: 5s</span>
+<span num="10">    static_configs:</span>
+<span num="11">     - targets:</span>
+<span num="12">        - &#34;localhost:9090&#34;</span>
+<span num="13">  - job_name: &#39;node&#39;</span>
+<span num="14">    scrape_interval: 1s</span>
+<span num="15">    static_configs:</span>
+<span num="16">     - targets:</span>
+<span num="17">        - &#34;localhost:9100&#34;</span>
+</pre>
+
+
+</div>
+
+  
+  <p>
+    Node exporter has no configuration file.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Running</h3>
+        
+  
+  <div class="code"><pre>node_exporter -collectors.enabled textfile -collector.textfile.directory=.
+prometheus</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Testing</h3>
+        
+  <ul>
+  
+    <li>Node Exporter metrics (<a href="http://localhost:9100/metrics" target="_blank">localhost:9100/metrics</a>)</li>
+  
+    <li>Prometheus internal metrics (<a href="http://localhost:9090/metrics" target="_blank">localhost:9090/metrics</a>)</li>
+  
+    <li>Prometheus Web Interface (<a href="http://localhost:9090" target="_blank">localhost:9090</a>)</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Adding some data</h3>
+        
+  
+  <p>
+    We can get the node exporter to expose arbitrary data.
+  </p>
+  
+
+  
+  <p>
+    Our flags to node_exporter make it serve any file with a .prom
+<br>
+
+    extension via it&#39;s metrics endpoint.
+  </p>
+  
+
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">sensor_temperature_celsius{zone=&#34;in-1&#34;} 29.2</span>
+<span num="2">sensor_temperature_celsius{zone=&#34;in-2&#34;} 19.0</span>
+<span num="3">sensor_temperature_celsius{zone=&#34;out-1&#34;} 17.2</span>
+<span num="4"></span>
+<span num="5">sensor_trip_point_celsius{zone=&#34;in-1&#34;, point=&#34;0&#34;} 45.0</span>
+<span num="6">sensor_trip_point_celsius{zone=&#34;in-1&#34;, point=&#34;1&#34;} 28.0</span>
+<span num="7">sensor_trip_point_celsius{zone=&#34;in-1&#34;, point=&#34;2&#34;} 31.0</span>
+<span num="8">sensor_trip_point_celsius{zone=&#34;in-2&#34;, point=&#34;0&#34;} 20.0</span>
+<span num="9">sensor_trip_point_celsius{zone=&#34;in-2&#34;, point=&#34;1&#34;} 22.0</span>
+</pre>
+
+
+</div>
+
+  
+  <p>
+    This can be useful for experimenting with queries
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>User Interface</h3>
+        
+  <ul>
+  
+    <li>Status &gt; Targets: Shows the status of each configured job</li>
+  
+    <li>Status &gt; Configuration: Running config</li>
+  
+    <li>Status &gt; Rules: Enabled rules</li>
+  
+    <li>Alerts: The firing alerts.</li>
+  
+    <li>Graphs &gt; TBC</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Jobs, targets and labels</h3>
+        
+  <ul>
+  
+    <li>Prometheus scrapes http endpoints (targets)</li>
+  
+    <li>Targets (a.k.a instances), are grouped into jobs</li>
+  
+    <li>All targets in a job should be part of a single service/function</li>
+  
+    <li>e.g. all targets are running a specific service</li>
+  
+    <li>Targets and jobs can be dynamically discovered</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Jobs, targets and labels - cont.</h3>
+        
+  
+  <p>
+    Labels can be defined:
+  </p>
+  
+
+  <ul>
+  
+    <li>at the job level</li>
+  
+    <li>at the instance level</li>
+  
+    <li>at the metric level</li>
+  
+  </ul>
+
+  
+  <p>
+    The metrics collected from an instance have the instance and job labels
+<br>
+
+    appended.
+  </p>
+  
+
+  
+  <p>
+    A *time series* is the combination of a metric name, the metric labels, the
+<br>
+
+    instances labels, and the job labels, plus an additional <i>job</i> and <i>instance</i>
+<br>
+
+    label.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>up</h3>
+        
+  
+  <p>
+    The <i>up</i> metric is created on the Prometheus server.
+  </p>
+  
+
+  <ul>
+  
+    <li>Used to determine if a target is scrapable.</li>
+  
+    <li>Include the job labels and instance labels (but no metric level labels)</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h2>PromQL</h2>
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Executing Queries</h3>
+        
+  
+  <p>
+    The Web interface <a href="http://localhost:9090/graph" target="_blank">localhost:9090/graph</a>
+  </p>
+  
+
+  <ul>
+  
+    <li>Console, presents a table of raw data</li>
+  
+    <li>Graph, plots a query at each points on the graph</li>
+  
+  </ul>
+
+  
+  <p>
+    An HTTP based API is available
+  </p>
+  
+
+  
+  <p>
+    Grafana is best for dashboard construction.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL</h3>
+        
+  <ul>
+  
+    <li>Prometheus has it&#39;s own Query Language, PromQL</li>
+  
+    <li>Reference</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Data model</h3>
+        
+  <ul>
+  
+    <li>All values are float64</li>
+  
+    <li>Label keys and values are strings (cannot do maths on them)</li>
+  
+    <li>A time series is a value associated with one full set of labels and label values over time</li>
+  
+    <li>Instant Vectors, the value of a set of time series at an instant</li>
+  
+    <li>Range Vectors, the value of a set of time series over a time range (a matrix)</li>
+  
+    <li>Single scalars and string literals</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Instant Vectors</h3>
+        
+  
+  <p>
+    A simple query for a metric, by name (in the console view), will return the current value
+<br>
+
+    of each time series of this metric. This set of values, and associated label values, represents
+<br>
+
+    an Instant in time.
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>sensor_temperature_celsius</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                                       Value
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-1&#34;}  29
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-2&#34;}  19
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;out-1&#34;} 17.2</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Instant Vectors - Filter</h3>
+        
+  
+  <p>
+    We can filter the set of time series we wish to receive using a Selector.
+<br>
+
+    (note the quotes, the label value is a string), passing the labels and
+<br>
+
+    values that wish are enquiring about.
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>sensor_temperature_celsius{zone=&#34;in-1&#34;}</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                                       Value
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-1&#34;}  29.2</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Instant Vectors - Regex</h3>
+        
+  
+  <p>
+    We can use regular expressions when selecting time series.
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>sensor_temperature_celsius{zone=~&#34;in-.&#43;&#34;}</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                                       Value
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-1&#34;}  29.2
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-2&#34;}  19</pre></div>
+  
+
+  
+  <p>
+    Note: Regex queries are tested against <b>all</b> label value for a time
+<br>
+
+    series. (Improved label indexing is in-progress). With millions of series, this can be
+<br>
+
+    very slow.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Instant Vectors - Negation</h3>
+        
+  
+  <p>
+    We can also select based on a negation of a match.
+  </p>
+  
+
+  
+  <p>
+    Queries
+  </p>
+  
+
+  
+  <div class="code"><pre>sensor_temperature_celsius{zone!~&#34;in-.*&#34;}</pre></div>
+  
+
+  
+  <p>
+    or
+  </p>
+  
+
+  
+  <div class="code"><pre>sensor_temperature_celsius{zone!=&#34;in-1&#34;}</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                                       Value
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;out-1&#34;} 17.2</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Plotting Instant Vectors</h3>
+        
+  
+  <p>
+    When producing charts of Prometheus data, we construct as query whose result is
+<br>
+
+    an <b>instant vector</b>.
+  </p>
+  
+
+  
+  <p>
+    This query is then run for each instant in time we wish to graph data for.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Range Vectors</h3>
+        
+  
+  <p>
+    If we add a time duration to the query, we get each data point for each matching time
+<br>
+
+    between the current time, and the preceding time interval.
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>sensor_temperature_celsius{zone!~&#34;in-.*&#34;}[5s]</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                          Value
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-1&#34;}
+                                                                 29.2 @1478087273.189
+                                                                 29.2 @1478087274.189
+                                                                 29.2 @1478087275.192
+                                                                 29.2 @1478087276.189
+                                                                 29.2 @1478087277.189
+sensor_temperature_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-2&#34;}
+                                                                 19 @1478087273.189
+                                                                 19 @1478087274.189
+                                                                 19 @1478087275.192
+                                                                 19 @1478087276.189
+                                                                 19 @1478087277.189</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Range Vectors</h3>
+        
+  
+  <p>
+    Time is given in seconds since the Unix epoch.
+  </p>
+  
+
+  
+  <p>
+    A query that results in a range vector cannot be graphed directly. We can use the range of data
+<br>
+
+    to calculate related values, using functions.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions</h3>
+        
+  
+  <p>
+    Functions act on each time series.
+  </p>
+  
+
+  
+  <p>
+    Some functions operate on individual values, others calculate over a time range.
+  </p>
+  
+
+  
+  <p>
+    Prometheus website includes a <a href="https://prometheus.io/docs/querying/functions/" target="_blank">function reference</a>
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions</h3>
+        
+  
+  <p>
+    Some functions will take an instant vector, and apply the function to each time
+<br>
+
+    series. This will return an instant vector. Note, the metric name is missing, as
+<br>
+
+    the result no longer represents that metric, All other labels are untouched.
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>round(sensor_temperature_celsius,1)</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                             Value
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-1&#34;}  29
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-2&#34;}  19
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;out-1&#34;} 17</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions</h3>
+        
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>round(sensor_temperature_celsius[5s],1)</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Error executing query: parse error at char 40: expected type vector in
+call to function &#34;round&#34;, got matrix</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions</h3>
+        
+  
+  <p>
+    Some functions will take a range vector, and return an instant
+<br>
+
+    vector after perform a calculation of all the values over the given
+<br>
+
+    time..
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>rate(sensor_temperature_celsius[15s])</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element Value
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-2&#34;}  0
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;out-1&#34;} 0
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,zone=&#34;in-1&#34;}  0</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions - Counters vs gauges</h3>
+        
+  
+  <p>
+    Some functions operate on monotonically increasing counters, and will handle
+<br>
+
+    counter resets and wraps
+  </p>
+  
+
+  <ul>
+  
+    <li><i>rate</i> - per-second rate of change</li>
+  
+    <li><i>increase</i> - increase over entire range vector</li>
+  
+  </ul>
+
+  
+  <p>
+    There are equivalent functions for (can be negative)
+  </p>
+  
+
+  <ul>
+  
+    <li><i>deriv</i> - per-second rate of change</li>
+  
+    <li><i>delta</i> - change over entire range vector</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions - Advanced</h3>
+        
+  <ul>
+  
+    <li>absent - if there is no data for a given selector</li>
+  
+    <li>resets, changes</li>
+  
+    <li><i>label_replace</i> - add/remove/modify labels</li>
+  
+    <li><i>prediict_linear</i> - linear regression into the future</li>
+  
+    <li>time, day, hour, month - date functions</li>
+  
+    <li><i>histogram_quantile</i> - calculate a quantile from a histogrogram</li>
+  
+    <li>Aggreagation over time (<i>*_over_time</i>), e.g. max value in one time series over the time range vector</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  
+  <p>
+    Operate on isntant vectors
+  </p>
+  
+
+  
+  <p>
+    Perform calculations over the label dimensions.
+  </p>
+  
+
+  
+  <p>
+    Can be modified with <b>by</b> and <b>without</b>
+  </p>
+  
+
+  
+  <p>
+    Aggreagtions can look like functions, but behave very differently
+  </p>
+  
+
+  
+  <p>
+    <a href="https://prometheus.io/docs/querying/operators/#aggregation-operators" target="_blank">Aggregation Reference</a>
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>max(sensor_trip_point_celsius)</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element Value
+{}      45</pre></div>
+  
+
+  
+  <p>
+    Note, all of the labels are removed.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  
+  <p>
+    We can get the maximum trip point set in each zone
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>max(sensor_trip_point_celsius) by (zone)</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element       Value
+{zone=&#34;in-1&#34;} 45
+{zone=&#34;in-2&#34;} 22</pre></div>
+  
+
+  
+  <p>
+    The values of the zone label are now preserved. We get the max value present for all time series with each of the given label values.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  
+  <p>
+    We can aggregate over multiple labels
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>max(sensor_trip_point_celsius) by (zone,instance)</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                 Value
+{instance=&#34;localhost:9100&#34;,zone=&#34;in-1&#34;} 45
+{instance=&#34;localhost:9100&#34;,zone=&#34;in-2&#34;} 22</pre></div>
+  
+
+  
+  <p>
+    We now have our original instance label, even though it&#39;s value on the two series are the same.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  
+  <p>
+    Using <b>by</b>, we can preserve labels.
+  </p>
+  
+
+  
+  <p>
+    We control which labels we will have after.
+  </p>
+  
+
+  
+  <p>
+    We need to be careful that we control the labels on the original series too.
+  </p>
+  
+
+  
+  <p>
+    E.g. What if there was an <i>az</i> label we didn&#39;t know about?
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  
+  <p>
+    We can use <b>without</b> to remove, rather than preserve labels. Aggregation is done over all
+<br>
+
+    the resulting series whose remaining labels all match
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>max(sensor_trip_point_celsius) without (zone)</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                           Value
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,point=&#34;0&#34;}  45
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,point=&#34;2&#34;}  31
+{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,point=&#34;1&#34;}  28</pre></div>
+  
+
+  
+  <p>
+    <i>zone</i> is now removed, all the largest value for each zone are provided
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Aggregations</h3>
+        
+  <ul>
+  
+    <li><i>sum</i> is the most common aggregate</li>
+  
+    <li><i>max , min , avg , stddev , stdvar</i></li>
+  
+    <li><i>count</i> the number of items in the instance vector (e.g. how many hosts have 500s)</li>
+  
+    <li><i>count_values</i>, <i>topk</i> and <i>bottomk</i> are slightly different (see reference)</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Functions vs Aggregates.</h3>
+        
+  
+  <p>
+    Functions
+  </p>
+  
+
+  <ul>
+  
+    <li>operate on one time series at a time</li>
+  
+    <li>aggregate over time series values within one time series</li>
+  
+  </ul>
+
+  
+  <p>
+    Aggregates
+  </p>
+  
+
+  <ul>
+  
+    <li>aggregate over the label dimensions</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Binary Operations</h3>
+        
+  <ul>
+  
+    <li>The normal mathematical and logical operations we expect form a calculator.</li>
+  
+    <li>Generally work as expected.</li>
+  
+    <li>Understanding labels is vital</li>
+  
+    <li><a href="https://prometheus.io/docs/querying/operators/" target="_blank">Operators Reference</a></li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Binary Operations</h3>
+        
+  
+  <p>
+    Arithmetic (+,-,\*,/,%,^)
+  </p>
+  
+
+  <ul>
+  
+    <li>Between to scalars - the obvious behaviour</li>
+  
+    <li>Instant vector and scalar - the obvious behaviour</li>
+  
+    <li>Between two instant vectors. Applied between metrics with matching labels</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Binary Operations</h3>
+        
+  
+  <p>
+    Comparison (==, !=, &gt;,&lt;,&gt;=,&lt;=) operators will filter out time series where the right hand side
+<br>
+
+    does not hold).
+  </p>
+  
+
+  
+  <p>
+    With a <b>bool</b> modifier, the result is 0, or 1, depending on match)
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Label Matching</h3>
+        
+  <ul>
+  
+    <li>sensor_trip_point_celsius has an extra label (&#34;point&#34;).</li>
+  
+    <li>We must decide how to deal with this.</li>
+  
+    <li>If we ignore it, we have multiple time series on the right hand side than the left.</li>
+  
+  </ul>
+
+  
+  <p>
+    The <i>ignoring</i>, <i>on</i>, <i>group_left</i> and <i>group_right</i> modifiers can be used to control
+<br>
+
+    matching
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Label Matching</h3>
+        
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">metric_one{a=&#34;xxx&#34;,b=&#34;xxx&#34;} 29.2</span>
+<span num="2">metric_one{a=&#34;yyy&#34;,b=&#34;xxx&#34;} 19.0</span>
+<span num="3">metric_one{a=&#34;zzz&#34;,b=&#34;yyy&#34;} 17.2</span>
+<span num="4"></span>
+<span num="5">metric_two{a=&#34;xxx&#34;,c=&#34;xxx&#34;} 29.2</span>
+<span num="6">metric_two{a=&#34;yyy&#34;,c=&#34;xxx&#34;} 19.0</span>
+<span num="7">metric_two{a=&#34;zzz&#34;,c=&#34;yyy&#34;} 17.2</span>
+</pre>
+
+
+</div>
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>metric_one &#43; metric_two</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                            Value
+no data</pre></div>
+  
+
+  
+  <p>
+    Labels do not match (&#34;b&#34; vs &#34;c&#34;)
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Label Matching</h3>
+        
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">metric_one{a=&#34;xxx&#34;,b=&#34;xxx&#34;} 29.2</span>
+<span num="2">metric_one{a=&#34;yyy&#34;,b=&#34;xxx&#34;} 19.0</span>
+<span num="3">metric_one{a=&#34;zzz&#34;,b=&#34;yyy&#34;} 17.2</span>
+<span num="4"></span>
+<span num="5">metric_two{a=&#34;xxx&#34;,c=&#34;xxx&#34;} 29.2</span>
+<span num="6">metric_two{a=&#34;yyy&#34;,c=&#34;xxx&#34;} 19.0</span>
+<span num="7">metric_two{a=&#34;zzz&#34;,c=&#34;yyy&#34;} 17.2</span>
+</pre>
+
+
+</div>
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>metric_one &#43; ignoring(b,c) metric_two</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                            Value
+{a=&#34;xxx&#34;,instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}  58.4
+{a=&#34;yyy&#34;,instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}  38
+{a=&#34;zzz&#34;,instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}  34.4</pre></div>
+  
+
+  
+  <p>
+    We can tell the label matching to ignore the &#34;b&#34;, and &#34;c&#34; labels, after
+<br>
+
+    doing so, all the remaining labels match, and addition occurs
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Label Matching</h3>
+        
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">metric_three{a=&#34;xxx&#34;,b=&#34;xxx&#34;} 29.2</span>
+<span num="2">metric_three{a=&#34;xxx&#34;,b=&#34;yyy&#34;} 19.0</span>
+<span num="3"></span>
+<span num="4">metric_four{a=&#34;xxx&#34;,b=&#34;xxx&#34;,c=&#34;aaa&#34;} 19.0</span>
+<span num="5">metric_four{a=&#34;xxx&#34;,b=&#34;yyy&#34;,c=&#34;aaa&#34;} 17.2</span>
+<span num="6">metric_four{a=&#34;xxx&#34;,b=&#34;yyy&#34;,c=&#34;bbb&#34;} 57.1</span>
+<span num="7">metric_four{a=&#34;xxx&#34;,b=&#34;zzz&#34;,c=&#34;bbb&#34;} 100</span>
+</pre>
+
+
+</div>
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>metric_three / ignoring(c) metric_four</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Error executing query: many-to-many matching not allowed: matching
+labels must be unique on one side</pre></div>
+  
+
+  
+  <p>
+    If we ignore &#34;c&#34;, then metric_three has duplicate values, we must decide
+<br>
+
+    how to deal with them.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Label Matching</h3>
+        
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">metric_three{a=&#34;xxx&#34;,b=&#34;xxx&#34;} 29.2</span>
+<span num="2">metric_three{a=&#34;xxx&#34;,b=&#34;yyy&#34;} 19.0</span>
+<span num="3"></span>
+<span num="4">metric_four{a=&#34;xxx&#34;,b=&#34;xxx&#34;,c=&#34;aaa&#34;} 19.0</span>
+<span num="5">metric_four{a=&#34;xxx&#34;,b=&#34;yyy&#34;,c=&#34;aaa&#34;} 17.2</span>
+<span num="6">metric_four{a=&#34;xxx&#34;,b=&#34;yyy&#34;,c=&#34;bbb&#34;} 57.1</span>
+<span num="7">metric_four{a=&#34;xxx&#34;,b=&#34;zzz&#34;,c=&#34;bbb&#34;} 100</span>
+</pre>
+
+
+</div>
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>metric_three * ignoring(c)  group_right  metric_four</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                         Value
+{a=&#34;xxx&#34;,b=&#34;xxx&#34;,c=&#34;aaa&#34;,instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}  554.8
+{a=&#34;xxx&#34;,b=&#34;yyy&#34;,c=&#34;aaa&#34;,instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}  326.8
+{a=&#34;xxx&#34;,b=&#34;yyy&#34;,c=&#34;bbb&#34;,instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}  1084.9</pre></div>
+  
+
+  
+  <p>
+    If we ignore &#34;c&#34;, metric_four would have duplicate metrics. group_right
+<br>
+
+    groups the RHS by the set of unused labels, and multiplies each LHS entry
+<br>
+
+    with each corresponding RHS.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Tricks</h3>
+        
+  
+  <p>
+    Selectors do not need to include a metric name
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>{instance =&#34;localhost:9100&#34;}</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                              Value
+...
+go_memstats_mcache_inuse_bytes{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;} 4800
+go_gc_duration_seconds_sum{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}     69.90411438
+node_textfile_scrape_error{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}     0
+go_memstats_mspan_sys_bytes{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;}    32768
+...</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Tricks</h3>
+        
+  
+  <p>
+    The metric name can be matched
+  </p>
+  
+
+  
+  <p>
+    Query:
+  </p>
+  
+
+  
+  <div class="code"><pre>{instance =&#34;localhost:9100&#34;,__name__=~ &#34;sensor_.&#43;&#34;}</pre></div>
+  
+
+  
+  <p>
+    Result:
+  </p>
+  
+
+  
+  <div class="code"><pre>Element                                                                               Value
+sensor_trip_point_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,point=&#34;1&#34;,zone=&#34;in-2&#34;} 22
+sensor_trip_point_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,point=&#34;0&#34;,zone=&#34;in-2&#34;} 20</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Tricks - Modifiers</h3>
+        
+  <ul>
+  
+    <li><i>offset</i> can be used with metric selectors to modify the data returned</li>
+  
+  </ul>
+
+  
+  <div class="code"><pre>count(sensor_temperature_celsius offset 1h)</pre></div>
+  
+
+  <ul>
+  
+    <li><i>bool</i> can be used to retrieve 0 or 1 for a comparison</li>
+  
+  </ul>
+
+  
+  <div class="code"><pre>count(sensor_temperature_celsius) &lt; bool 1</pre></div>
+  
+
+  <ul>
+  
+    <li>Grouping can be combined with identity operations (+ 0, or * 1), to join labels</li>
+  
+  </ul>
+
+  
+  <div class="code"><pre>rate(cpu_system_seconds_total[1m]) &#43; ON(mesos_task_id) GROUP_LEFT(job, team)
+   clamp_max(mesos_task_id_job_team:up:sum, 0)</pre></div>
+  
+
+  <ul>
+  
+    <li><i>label_replace</i> can be used to add, remove and rewrite labels</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>PromQL - Recording Rules</h3>
+        
+  
+  <p>
+    Recording rules can be used to create new metrics from calculations. They can
+<br>
+
+    also be used to name, and thus document, intermediate terms.
+  </p>
+  
+
+  <ul>
+  
+    <li>Configured on the server</li>
+  
+    <li>Evaluated periodically (configurable)</li>
+  
+    <li>The only way to get a range vector from an arbitrary expression</li>
+  
+  </ul>
+
+  
+  <div class="code"><pre>sum(min(...))[5m] &lt;-- Time selector is only valid in a metric selector</pre></div>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h2>Alerting</h2>
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>How it works.</h3>
+        
+  <ul>
+  
+    <li>Rules are defined on the Prometheus server</li>
+  
+    <li>Rules are evaluated by the Prometheus server</li>
+  
+    <li>Raised alerts are passed to the alert manager</li>
+  
+    <li>Notifications are sent by the alert manager</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Example</h3>
+        
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">ALERT SensorsTripped</span>
+<span num="2">  IF sensor_temperature_celsius &gt; ignoring(point) group_right  sensor_trip_point_celsius</span>
+<span num="3">  FOR 5m</span>
+<span num="4">  LABELS {</span>
+<span num="5">    severity = &#34;page&#34;,</span>
+<span num="6">    team = &#34;infra&#34;,</span>
+<span num="7">  }</span>
+<span num="8">  ANNOTATIONS {</span>
+<span num="9">    dashboard_url = &#34;http://grafanadash.com/sensordash&#34;,</span>
+<span num="10">    runbook_url = &#34;http://wiki.com/Alerts&#34;,</span>
+<span num="11">  }</span>
+</pre>
+
+
+</div>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Example</h3>
+        
+  <ul>
+  
+    <li>Alert names should be descriptive.</li>
+  
+    <li><i>IF</i> is a query, for which any results are considered as active alerts</li>
+  
+    <li><i>FOR</i> gives a time period for which the alert must firing to be considered an active alert</li>
+  
+    <li><i>LABELS</i> give a set of labels to add to all time series</li>
+  
+    <li><i>ANNOTATIONS</i> give a set of &#34;non-identifying&#34; labels (that are not considered part of the time series)</li>
+  
+  </ul>
+
+  
+  <p>
+    Label and Annotation values can be templated using Go templates
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Alert handling</h3>
+        
+  <ul>
+  
+    <li>Each firing alert is sent to the alert manager</li>
+  
+    <li>Alert manager groups this labels in to batches using labels in <i>group by</i></li>
+  
+    <li>After various timers (group_wait, group_interval, repeat_interval), grouped alerts are sent to routes</li>
+  
+    <li>routes are e-mail, HipChat and Slack etc.</li>
+  
+    <li>Templates can be used to provide prettier presentations of grouped alerts.</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Final Alert</h3>
+        
+<div class="image">
+  <img src="alert-explain.svg" width="1024">
+</div>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>Aton</h3>
+        
+  
+  <p>
+    Aton is a Qubit internal tool to simplify deployment of rules.
+  </p>
+  
+
+  <ul>
+  
+    <li>Publishes alerts into etcd</li>
+  
+    <li>Alerts are identified with an application</li>
+  
+    <li>Alerts are merged into the Prometheus server of a given environment</li>
+  
+    <li>Keep the configuration in your repo</li>
+  
+    <li>YAML definition</li>
+  
+  </ul>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>aton.yml</h3>
+        
+  <div class="code" contenteditable="true" spellcheck="false">
+
+
+<pre><span num="1">id: sensor-app</span>
+<span num="2"></span>
+<span num="3">alerts:</span>
+<span num="4">  SensorsTripped:</span>
+<span num="5">    if: &#39;sensor_temperature_celsius &gt; ignoring(point) group_right  sensor_trip_point_celsius&#39;</span>
+<span num="6">    for: 5m</span>
+<span num="7">    labels:</span>
+<span num="8">      severity: page</span>
+<span num="9">      team: infra</span>
+<span num="10">    alert:</span>
+<span num="11">      description: &#34;Sensor in {{ $labels.zone }} has reached {{ $value }}&#34;</span>
+</pre>
+
+
+</div>
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h3>aton.yml &#43; aton.rules</h3>
+        
+  
+  <p>
+    You can ignore the YAML <i>alerts</i> section, and add alerts into an <i>aton.rules</i> file.
+  </p>
+  
+
+      
+      </article>
+  
+  
+  
+      <article>
+      
+        <h2>Grafana</h2>
+      
+      </article>
+  
+  
+
+      <article>
+        <h3>Thank you</h1>
+        
+          <div class="presenter">
+            
+  
+  <p>
+    Tristan Colgate-McFarlane
+  </p>
+  
+
+  
+  <p>
+    Infrastructure Engineer, Qubit
+  </p>
+  
+<p class="link"><a href="mailto:tristan@qubit.com" target="_blank">tristan@qubit.com</a></p>
+          </div>
+        
+      </article>
+
+  </body>
+  
+</html>

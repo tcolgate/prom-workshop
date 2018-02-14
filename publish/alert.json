@@ -1,0 +1,15 @@
+{
+  "version": "2",
+  "status": "firing",
+  "alerts": [
+    {
+      "labels": {"severity": "green"},
+      "annotations": {
+        "title": "test webhook title",
+        "description": "test webhook description"
+      },
+      "startsAt": "2016-09-13T0:44:24+01:00",
+      "endsAt": "2016-09-25T11:44:23+01:00"
+    }
+  ]
+}

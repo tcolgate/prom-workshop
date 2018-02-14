@@ -1,0 +1,7 @@
+metric_three{a="xxx",b="xxx"} 29.2
+metric_three{a="xxx",b="yyy"} 19.0
+
+metric_four{a="xxx",b="xxx",c="aaa"} 19.0
+metric_four{a="xxx",b="yyy",c="aaa"} 17.2
+metric_four{a="xxx",b="yyy",c="bbb"} 57.1
+metric_four{a="xxx",b="zzz",c="bbb"} 100

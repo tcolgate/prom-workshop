@@ -1,0 +1,7 @@
+metric_one{a="xxx",b="xxx"} 29.2
+metric_one{a="yyy",b="xxx"} 19.0
+metric_one{a="zzz",b="yyy"} 17.2
+
+metric_two{a="xxx",c="xxx"} 29.2
+metric_two{a="yyy",c="xxx"} 19.0
+metric_two{a="zzz",c="yyy"} 17.2

@@ -1,0 +1,9 @@
+sensor_temperature_celsius{zone="in-1"} 29.2
+sensor_temperature_celsius{zone="in-2"} 19.0
+sensor_temperature_celsius{zone="out-1"} 17.2
+
+sensor_trip_point_celsius{zone="in-1", point="0"} 45.0
+sensor_trip_point_celsius{zone="in-1", point="1"} 28.0
+sensor_trip_point_celsius{zone="in-1", point="2"} 31.0
+sensor_trip_point_celsius{zone="in-2", point="0"} 20.0
+sensor_trip_point_celsius{zone="in-2", point="1"} 22.0

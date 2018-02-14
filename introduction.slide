@@ -1,0 +1,630 @@
+Prometheus Workshop
+22 July 2016
+Tags: prometheus
+
+Tristan Colgate-McFarlane
+Infrastructure Engineer, Qubit
+tristan@qubit.com
+
+* Agenda
+
+- Installing
+- Querying
+- Alerting
+- Grafana
+
+* Installation
+
+* An install for learning
+
+A simple installation for experimentation
+
+- Components
+- Configuration
+- Running
+
+* Components
+
+Download from [[https://prometheus.io/download/]]
+
+- Prometheus
+- node_exporter
+
+Download, and untar. Both can be run directly from the download directory
+
+* Configuration
+
+Simple prometheus,yml
+- Monitors itself (not done by default)
+- Monitors the node exporter
+
+.code prometheus.yml
+
+Node exporter has no configuration file.
+
+* Running
+
+  node_exporter -collectors.enabled textfile -collector.textfile.directory=.
+  prometheus
+
+* Testing
+
+- Node Exporter metrics ([[http://localhost:9100/metrics]])
+- Prometheus internal metrics ([[http://localhost:9090/metrics]])
+- Prometheus Web Interface ([[http://localhost:9090]])
+
+* Adding some data
+
+We can get the node exporter to expose arbitrary data.
+
+Our flags to node_exporter make it serve any file with a .prom
+extension via it's metrics endpoint.
+
+.code data.prom
+
+This can be useful for experimenting with queries
+
+* User Interface
+
+- Status > Targets: Shows the status of each configured job
+- Status > Configuration: Running config
+- Status > Rules: Enabled rules
+- Alerts: The firing alerts.
+- Graphs > TBC
+
+* Jobs, targets and labels
+
+- Prometheus scrapes http endpoints (targets)
+- Targets (a.k.a instances), are grouped into jobs
+- All targets in a job should be part of a single service/function
+- e.g. all targets are running a specific service
+- Targets and jobs can be dynamically discovered
+
+* Jobs, targets and labels - cont.
+
+Labels can be defined:
+
+- at the job level
+- at the instance level
+- at the metric level
+
+The metrics collected from an instance have the instance and job labels
+appended.
+
+A *time series* is the combination of a metric name, the metric labels, the
+instances labels, and the job labels, plus an additional _job_ and _instance_
+label.
+
+* up
+
+The _up_ metric is created on the Prometheus server.
+
+- Used to determine if a target is scrapable.
+- Include the job labels and instance labels (but no metric level labels)
+
+* PromQL
+
+* Executing Queries
+
+The Web interface [[http://localhost:9090/graph]]
+
+- Console, presents a table of raw data
+- Graph, plots a query at each points on the graph
+
+An HTTP based API is available
+
+Grafana is best for dashboard construction.
+
+* PromQL
+
+- Prometheus has it's own Query Language, PromQL
+- [[https://prometheus.io/docs/querying/basics/][Language Reference]]
+
+* PromQL - Data model
+
+- All values are float64
+- Label keys and values are strings (cannot do maths on them)
+- A time series is a value associated with one full set of labels and label values over time
+- Instant Vectors, the value of a set of time series at an instant
+- Range Vectors, the value of a set of time series over a time range (a matrix)
+- Single scalars and string literals
+
+* PromQL - Instant Vectors
+
+A simple query for a metric, by name (in the console view), will return the current value
+of each time series of this metric. This set of values, and associated label values, represents
+an Instant in time.
+
+Query:
+
+  sensor_temperature_celsius
+
+Result:
+
+  Element                                                                       Value
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-1"}  29
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-2"}  19
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="out-1"} 17.2
+
+* PromQL - Instant Vectors - Filter
+
+We can filter the set of time series we wish to receive using a Selector.
+(note the quotes, the label value is a string), passing the labels and
+values that wish are enquiring about.
+
+Query:
+
+  sensor_temperature_celsius{zone="in-1"}
+
+Result:
+
+  Element                                                                       Value
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-1"}  29.2
+
+* PromQL - Instant Vectors - Regex
+
+We can use regular expressions when selecting time series.
+
+Query:
+
+  sensor_temperature_celsius{zone=~"in-.+"}
+
+Result:
+
+  Element                                                                       Value
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-1"}  29.2
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-2"}  19
+
+Note: Regex queries are tested against *all* label value for a time
+series. (Improved label indexing is in-progress). With millions of series, this can be
+very slow.
+
+* PromQL - Instant Vectors - Negation
+
+We can also select based on a negation of a match.
+
+Queries
+
+  sensor_temperature_celsius{zone!~"in-.*"}
+
+or
+
+  sensor_temperature_celsius{zone!="in-1"}
+
+Result:
+
+  Element                                                                       Value
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="out-1"} 17.2
+
+* PromQL - Plotting Instant Vectors
+
+When producing charts of Prometheus data, we construct as query whose result is
+an *instant*vector*.
+
+This query is then run for each instant in time we wish to graph data for.
+
+* PromQL - Range Vectors
+
+If we add a time duration to the query, we get each data point for each matching time
+between the current time, and the preceding time interval.
+
+Query:
+
+  sensor_temperature_celsius{zone!~"in-.*"}[5s]
+
+Result:
+
+  Element                                                          Value
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-1"}
+                                                                   29.2 @1478087273.189
+                                                                   29.2 @1478087274.189
+                                                                   29.2 @1478087275.192
+                                                                   29.2 @1478087276.189
+                                                                   29.2 @1478087277.189
+  sensor_temperature_celsius{instance="localhost:9100",job="node",zone="in-2"}
+                                                                   19 @1478087273.189
+                                                                   19 @1478087274.189
+                                                                   19 @1478087275.192
+                                                                   19 @1478087276.189
+                                                                   19 @1478087277.189
+
+* PromQL - Range Vectors
+
+Time is given in seconds since the Unix epoch.
+
+A query that results in a range vector cannot be graphed directly. We can use the range of data
+to calculate related values, using functions.
+
+* PromQL - Functions
+
+Functions act on each time series.
+
+Some functions operate on individual values, others calculate over a time range.
+
+Prometheus website includes a [[https://prometheus.io/docs/querying/functions/][function reference]]
+
+* PromQL - Functions
+
+Some functions will take an instant vector, and apply the function to each time
+series. This will return an instant vector. Note, the metric name is missing, as
+the result no longer represents that metric, All other labels are untouched.
+
+Query:
+
+  round(sensor_temperature_celsius,1)
+
+Result:
+
+  Element                                             Value
+  {instance="localhost:9100",job="node",zone="in-1"}  29
+  {instance="localhost:9100",job="node",zone="in-2"}  19
+  {instance="localhost:9100",job="node",zone="out-1"} 17
+
+* PromQL - Functions
+
+Query:
+
+  round(sensor_temperature_celsius[5s],1)
+
+Result:
+
+  Error executing query: parse error at char 40: expected type vector in
+  call to function "round", got matrix
+
+* PromQL - Functions
+
+Some functions will take a range vector, and return an instant
+vector after perform a calculation of all the values over the given
+time..
+
+Query:
+
+  rate(sensor_temperature_celsius[15s])
+
+Result:
+
+  Element Value
+  {instance="localhost:9100",job="node",zone="in-2"}  0
+  {instance="localhost:9100",job="node",zone="out-1"} 0
+  {instance="localhost:9100",job="node",zone="in-1"}  0
+
+* PromQL - Functions - Counters vs gauges
+
+Some functions operate on monotonically increasing counters, and will handle
+counter resets and wraps
+
+- _rate_ - per-second rate of change
+- _increase_ - increase over entire range vector
+
+There are equivalent functions for (can be negative)
+
+- _deriv_ - per-second rate of change
+- _delta_ - change over entire range vector
+
+* PromQL - Functions - Advanced
+
+- absent - if there is no data for a given selector
+- resets, changes
+- _label__replace_ - add/remove/modify labels
+- _prediict__linear_ - linear regression into the future
+- time, day, hour, month - date functions
+- _histogram__quantile_ - calculate a quantile from a histogrogram
+- Aggreagation over time (_*__over__time_), e.g. max value in one time series over the time range vector
+
+* PromQL - Aggregations
+
+Operate on isntant vectors
+
+Perform calculations over the label dimensions.
+
+Can be modified with *by* and *without*
+
+Aggreagtions can look like functions, but behave very differently
+
+[[https://prometheus.io/docs/querying/operators/#aggregation-operators][Aggregation Reference]]
+
+* PromQL - Aggregations
+
+Query:
+
+  max(sensor_trip_point_celsius)
+
+Result:
+
+  Element Value
+  {}      45
+
+Note, all of the labels are removed.
+
+* PromQL - Aggregations
+
+We can get the maximum trip point set in each zone
+
+Query:
+
+  max(sensor_trip_point_celsius) by (zone)
+
+Result:
+
+  Element       Value
+  {zone="in-1"} 45
+  {zone="in-2"} 22
+
+The values of the zone label are now preserved. We get the max value present for all time series with each of the given label values.
+
+* PromQL - Aggregations
+
+We can aggregate over multiple labels
+
+Query:
+
+  max(sensor_trip_point_celsius) by (zone,instance)
+
+Result:
+
+  Element                                 Value
+  {instance="localhost:9100",zone="in-1"} 45
+  {instance="localhost:9100",zone="in-2"} 22
+
+We now have our original instance label, even though it's value on the two series are the same.
+
+* PromQL - Aggregations
+
+Using *by*, we can preserve labels.
+
+We control which labels we will have after.
+
+We need to be careful that we control the labels on the original series too.
+
+E.g. What if there was an _az_ label we didn't know about?
+
+* PromQL - Aggregations
+
+We can use *without* to remove, rather than preserve labels. Aggregation is done over all
+the resulting series whose remaining labels all match
+
+Query:
+
+  max(sensor_trip_point_celsius) without (zone)
+
+Result:
+
+  Element                                           Value
+  {instance="localhost:9100",job="node",point="0"}  45
+  {instance="localhost:9100",job="node",point="2"}  31
+  {instance="localhost:9100",job="node",point="1"}  28
+
+_zone_ is now removed, all the largest value for each zone are provided
+
+* PromQL - Aggregations
+
+- _sum_ is the most common aggregate
+- _max_,_min_,_avg_,_stddev_,_stdvar_
+- _count_ the number of items in the instance vector (e.g. how many hosts have 500s)
+- _count__values_, _topk_ and _bottomk_ are slightly different (see reference)
+
+* PromQL - Functions vs Aggregates.
+
+Functions
+
+- operate on one time series at a time
+- aggregate over time series values within one time series
+
+Aggregates
+
+- aggregate over the label dimensions
+
+* PromQL - Binary Operations
+
+- The normal mathematical and logical operations we expect form a calculator.
+- Generally work as expected.
+- Understanding labels is vital
+- [[https://prometheus.io/docs/querying/operators/][Operators Reference]]
+
+* PromQL - Binary Operations
+
+Arithmetic (+,-,\*,/,%,^)
+
+- Between to scalars - the obvious behaviour
+- Instant vector and scalar - the obvious behaviour
+- Between two instant vectors. Applied between metrics with matching labels
+
+* PromQL - Binary Operations
+
+Comparison (==, !=, >,<,>=,<=) operators will filter out time series where the right hand side
+does not hold).
+
+With a *bool* modifier, the result is 0, or 1, depending on match)
+
+* PromQL - Label Matching
+
+- sensor_trip_point_celsius has an extra label ("point").
+- We must decide how to deal with this.
+- If we ignore it, we have multiple time series on the right hand side than the left.
+
+The _ignoring_, _on_, _group__left_ and _group__right_ modifiers can be used to control
+matching
+
+
+* PromQL - Label Matching
+
+.code data-matching1.prom
+
+Query:
+
+  metric_one + metric_two
+
+Result:
+
+  Element	                                        Value
+  no data
+
+Labels do not match ("b" vs "c")
+
+* PromQL - Label Matching
+
+.code data-matching1.prom
+
+Query:
+
+  metric_one + ignoring(b,c) metric_two
+
+Result:
+
+  Element	                                        Value
+  {a="xxx",instance="localhost:9100",job="node"}  58.4
+  {a="yyy",instance="localhost:9100",job="node"}  38
+  {a="zzz",instance="localhost:9100",job="node"}  34.4
+
+We can tell the label matching to ignore the "b", and "c" labels, after
+doing so, all the remaining labels match, and addition occurs
+
+* PromQL - Label Matching
+
+.code data-matching2.prom
+
+Query:
+
+  metric_three / ignoring(c) metric_four
+
+Result:
+
+  Error executing query: many-to-many matching not allowed: matching
+  labels must be unique on one side
+
+If we ignore "c", then metric_three has duplicate values, we must decide
+how to deal with them.
+
+* PromQL - Label Matching
+
+.code data-matching2.prom
+
+Query:
+
+  metric_three * ignoring(c)  group_right  metric_four
+
+Result:
+
+  Element                                                         Value
+  {a="xxx",b="xxx",c="aaa",instance="localhost:9100",job="node"}  554.8
+  {a="xxx",b="yyy",c="aaa",instance="localhost:9100",job="node"}  326.8
+  {a="xxx",b="yyy",c="bbb",instance="localhost:9100",job="node"}  1084.9
+
+If we ignore "c", metric_four would have duplicate metrics. group_right
+groups the RHS by the set of unused labels, and multiplies each LHS entry
+with each corresponding RHS.
+
+* PromQL - Tricks
+
+Selectors do not need to include a metric name
+
+Query:
+
+  {instance ="localhost:9100"}
+
+Result:
+
+  Element                                                              Value
+  ...
+  go_memstats_mcache_inuse_bytes{instance="localhost:9100",job="node"} 4800
+  go_gc_duration_seconds_sum{instance="localhost:9100",job="node"}     69.90411438
+  node_textfile_scrape_error{instance="localhost:9100",job="node"}     0
+  go_memstats_mspan_sys_bytes{instance="localhost:9100",job="node"}    32768
+  ...
+
+* PromQL - Tricks
+
+The metric name can be matched
+
+Query:
+
+  {instance ="localhost:9100",__name__=~ "sensor_.+"}
+
+Result:
+
+  Element                                                                               Value
+  sensor_trip_point_celsius{instance="localhost:9100",job="node",point="1",zone="in-2"} 22
+  sensor_trip_point_celsius{instance="localhost:9100",job="node",point="0",zone="in-2"} 20
+
+* PromQL - Tricks - Modifiers
+
+- _offset_ can be used with metric selectors to modify the data returned
+
+  count(sensor_temperature_celsius offset 1h)
+
+- _bool_ can be used to retrieve 0 or 1 for a comparison
+
+  count(sensor_temperature_celsius) < bool 1
+
+- Grouping can be combined with identity operations (+ 0, or * 1), to join labels
+
+  rate(cpu_system_seconds_total[1m]) + ON(mesos_task_id) GROUP_LEFT(job, team)
+     clamp_max(mesos_task_id_job_team:up:sum, 0)
+
+- _label__replace_ can be used to add, remove and rewrite labels
+
+* PromQL - Recording Rules
+
+Recording rules can be used to create new metrics from calculations. They can
+also be used to name, and thus document, intermediate terms.
+
+- Configured on the server
+- Evaluated periodically (configurable)
+- The only way to get a range vector from an arbitrary expression
+  sum(min(...))[5m] <-- Time selector is only valid in a metric selector
+
+* Alerting
+
+* How it works.
+
+- Rules are defined on the Prometheus server
+- Rules are evaluated by the Prometheus server
+- Raised alerts are passed to the alert manager
+- Notifications are sent by the alert manager
+
+* Example
+
+.code aton.rules
+
+* Example
+
+- Alert names should be descriptive.
+- _IF_ is a query, for which any results are considered as active alerts
+- _FOR_ gives a time period for which the alert must firing to be considered an active alert
+- _LABELS_ give a set of labels to add to all time series
+- _ANNOTATIONS_ give a set of "non-identifying" labels (that are not considered part of the time series)
+
+Label and Annotation values can be templated using Go templates
+
+* Alert handling
+
+- Each firing alert is sent to the alert manager
+- Alert manager groups this labels in to batches using labels in _group_by_
+- After various timers (group_wait, group_interval, repeat_interval), grouped alerts are sent to routes
+- routes are e-mail, HipChat and Slack etc.
+- Templates can be used to provide prettier presentations of grouped alerts.
+
+* Final Alert
+
+.image alert-explain.svg _ 1024
+
+* Aton
+
+Aton is a Qubit internal tool to simplify deployment of rules.
+
+- Publishes alerts into etcd
+- Alerts are identified with an application
+- Alerts are merged into the Prometheus server of a given environment
+- Keep the configuration in your repo
+- YAML definition
+
+* aton.yml
+
+.code aton.yml
+
+* aton.yml + aton.rules
+
+You can ignore the YAML _alerts_ section, and add alerts into an _aton.rules_ file.
+
+* Grafana
+
