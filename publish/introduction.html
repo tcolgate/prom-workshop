@@ -417,7 +417,7 @@ prometheus</pre></div>
   
     <li>Prometheus has it&#39;s own Query Language, PromQL</li>
   
-    <li>Reference</li>
+    <li><a href="https://prometheus.io/docs/querying/basics/" target="_blank">Language Reference</a></li>
   
   </ul>
 
@@ -1749,17 +1749,19 @@ sensor_trip_point_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,p
   <div class="code" contenteditable="true" spellcheck="false">
 
 
-<pre><span num="1">ALERT SensorsTripped</span>
-<span num="2">  IF sensor_temperature_celsius &gt; ignoring(point) group_right  sensor_trip_point_celsius</span>
-<span num="3">  FOR 5m</span>
-<span num="4">  LABELS {</span>
-<span num="5">    severity = &#34;page&#34;,</span>
-<span num="6">    team = &#34;infra&#34;,</span>
-<span num="7">  }</span>
-<span num="8">  ANNOTATIONS {</span>
-<span num="9">    dashboard_url = &#34;http://grafanadash.com/sensordash&#34;,</span>
-<span num="10">    runbook_url = &#34;http://wiki.com/Alerts&#34;,</span>
-<span num="11">  }</span>
+<pre><span num="1">groups:</span>
+<span num="2">- name: sensor</span>
+<span num="3">  rules:</span>
+<span num="4">  - alert: SensorsTripped</span>
+<span num="5">    expr: sensor_temperature_celsius &gt; ignoring(point) group_right() sensor_trip_point_celsius</span>
+<span num="6">    for: 5m</span>
+<span num="7">    labels:</span>
+<span num="8">      severity: page</span>
+<span num="9">      team: infra</span>
+<span num="10">    annotations:</span>
+<span num="11">      description: &#34;Sensor in {{ $labels.zone }} has reached {{ $value }}&#34;</span>
+<span num="12">      dashboard_url: http://grafanadash.com/sensordash</span>
+<span num="13">      runbook_url: http://wiki.com/Alerts</span>
 </pre>
 
 
@@ -1829,78 +1831,6 @@ sensor_trip_point_celsius{instance=&#34;localhost:9100&#34;,job=&#34;node&#34;,p
 <div class="image">
   <img src="alert-explain.svg" width="1024">
 </div>
-
-      
-      </article>
-  
-  
-  
-      <article>
-      
-        <h3>Aton</h3>
-        
-  
-  <p>
-    Aton is a Qubit internal tool to simplify deployment of rules.
-  </p>
-  
-
-  <ul>
-  
-    <li>Publishes alerts into etcd</li>
-  
-    <li>Alerts are identified with an application</li>
-  
-    <li>Alerts are merged into the Prometheus server of a given environment</li>
-  
-    <li>Keep the configuration in your repo</li>
-  
-    <li>YAML definition</li>
-  
-  </ul>
-
-      
-      </article>
-  
-  
-  
-      <article>
-      
-        <h3>aton.yml</h3>
-        
-  <div class="code" contenteditable="true" spellcheck="false">
-
-
-<pre><span num="1">id: sensor-app</span>
-<span num="2"></span>
-<span num="3">alerts:</span>
-<span num="4">  SensorsTripped:</span>
-<span num="5">    if: &#39;sensor_temperature_celsius &gt; ignoring(point) group_right  sensor_trip_point_celsius&#39;</span>
-<span num="6">    for: 5m</span>
-<span num="7">    labels:</span>
-<span num="8">      severity: page</span>
-<span num="9">      team: infra</span>
-<span num="10">    alert:</span>
-<span num="11">      description: &#34;Sensor in {{ $labels.zone }} has reached {{ $value }}&#34;</span>
-</pre>
-
-
-</div>
-
-      
-      </article>
-  
-  
-  
-      <article>
-      
-        <h3>aton.yml &#43; aton.rules</h3>
-        
-  
-  <p>
-    You can ignore the YAML <i>alerts</i> section, and add alerts into an <i>aton.rules</i> file.
-  </p>
-  
 
       
       </article>

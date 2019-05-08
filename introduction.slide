@@ -584,7 +584,7 @@ also be used to name, and thus document, intermediate terms.
 
 * Example
 
-.code aton.rules
+.code aton.rules.yml
 
 * Example
 
@@ -607,24 +607,6 @@ Label and Annotation values can be templated using Go templates
 * Final Alert
 
 .image alert-explain.svg _ 1024
-
-* Aton
-
-Aton is a Qubit internal tool to simplify deployment of rules.
-
-- Publishes alerts into etcd
-- Alerts are identified with an application
-- Alerts are merged into the Prometheus server of a given environment
-- Keep the configuration in your repo
-- YAML definition
-
-* aton.yml
-
-.code aton.yml
-
-* aton.yml + aton.rules
-
-You can ignore the YAML _alerts_ section, and add alerts into an _aton.rules_ file.
 
 * Grafana
 

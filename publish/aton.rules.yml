@@ -1,0 +1,13 @@
+groups:
+- name: sensor
+  rules:
+  - alert: SensorsTripped
+    expr: sensor_temperature_celsius > ignoring(point) group_right() sensor_trip_point_celsius
+    for: 5m
+    labels:
+      severity: page
+      team: infra
+    annotations:
+      description: "Sensor in {{ $labels.zone }} has reached {{ $value }}"
+      dashboard_url: http://grafanadash.com/sensordash
+      runbook_url: http://wiki.com/Alerts
